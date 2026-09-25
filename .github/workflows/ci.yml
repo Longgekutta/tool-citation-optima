@@ -1,0 +1,11 @@
+name: Antigravity Universal CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  universal-ci:
+    uses: Longgekutta/.github/.github/workflows/reusable-ci.yml@main

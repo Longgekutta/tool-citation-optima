@@ -1,0 +1,103 @@
+{
+  "project_name": "tool-citation-optima",
+  "version": "1.0.0",
+  "last_updated": "2026-09-25 19:13:57",
+  "search_topic": "software documentation citation provenance and architectural decision records",
+  "radar_query_vectors": [
+    "software documentation citation provenance and architectural decision records core",
+    "software documentation citation provenance and architectural decision records benchmark",
+    "software documentation citation provenance and architectural decision records spec"
+  ],
+  "grounded_sources": [
+    {
+      "name": "MADR (Markdown Architecture Decision Records)",
+      "category": "INDUSTRY_STANDARD",
+      "url": "https://adr.github.io/madr/",
+      "stars": null,
+      "core_insight": "提出轻量级 Markdown 决策记录格式，强调列出备选方案 (Considered Options) 与推导依据",
+      "adopted_aspects": "吸收其精炼的对标表格与决策动因 (Decision Drivers) 结构",
+      "tradeoff": "剔除其对 Node.js/npm 的外部工具链绑定，全内核 100% 采用 Python 标准库实现"
+    },
+    {
+      "name": "Rust RFC Process & Kubernetes KEP",
+      "category": "SPEC_RFC",
+      "url": "https://github.com/rust-lang/rfcs",
+      "stars": null,
+      "core_insight": "强制要求技术方案在合并前必须经过详尽的 Prior Art 与 Alternatives Considered 论证",
+      "adopted_aspects": "吸收其必须回答为什么不选方案 X 的严格推导脉络",
+      "tradeoff": "将语言级与大规模集群规范提炼为跨所有项目的通用轻量自动化契约"
+    },
+    {
+      "name": "Citation File Format (CFF)",
+      "category": "ACADEMIC_STANDARD",
+      "url": "https://citation-file-format.github.io/",
+      "stars": null,
+      "core_insight": "专为科研软件与开源工程制定的机器可读引用标准 (v1.2.0)，被 GitHub 与 Zenodo 官方原生解析渲染",
+      "adopted_aspects": "完整支持出厂自动化生成标准 CITATION.cff",
+      "tradeoff": "补充了 CFF 所缺失的 AI 雷达检索词与动态量规记录，衍生出互补的 .provenance.json"
+    },
+    {
+      "name": "W3C PROV-DM (Provenance Data Model)",
+      "category": "W3C_STANDARD",
+      "url": "https://www.w3.org/TR/prov-dm/",
+      "stars": null,
+      "core_insight": "形式化定义信息谱系实体、活动与执行主体的溯源依赖拓扑",
+      "adopted_aspects": "吸收其谱系推导链条思想 (Project <- Activity <- Radar <- Search)",
+      "tradeoff": "舍弃 W3C 极其繁琐沉重的 XML/OWL 本体论，压缩为纳秒级解析的轻量 JSON 谱系账本"
+    },
+    {
+      "name": "Diátaxis Documentation Framework",
+      "category": "INDUSTRY_STANDARD",
+      "url": "https://diataxis.fr/",
+      "stars": null,
+      "core_insight": "软件文档四分法，将架构思考归入 Explanation 避免污染快速上手",
+      "adopted_aspects": "吸收其分层思想，使溯源矩阵既能充当认知门面，又不干扰极速 QuickStart",
+      "tradeoff": "增加自适应锚点识别算法，使注入过程对异构 Markdown 格式达到非破坏性平衡"
+    },
+    {
+      "name": "OmniScout-Radar (全知元阵)",
+      "category": "FIRST_PARTY_RADAR",
+      "url": "https://github.com/Longgekutta/tool-omniscout-radar",
+      "stars": null,
+      "core_insight": "4 阶段全自主技术侦察 (动态本体合成 -> 双轨并发探针 -> 拓扑滚雪球采样 -> 动态金丝雀量规审计)",
+      "adopted_aspects": "充当原生底层搜索引擎与权威源流提供方，实现一键从全网雷达到文档注入的闭环",
+      "tradeoff": "本工具专精于引用提纯、五维量规审计与有机融合，与雷达的全网穿透搜索形成严密正交分工"
+    }
+  ],
+  "architectural_invariants": [
+    "Zero-Pip Pure Standard Library",
+    "Sub-15ms Startup & Verification Latency",
+    "Fixed-Point Convergence f(x) = x"
+  ],
+  "alternatives_considered": [
+    {
+      "alternative": "MADR (Markdown Architecture Decision Records)",
+      "reason_rejected_or_adapted": "剔除其对 Node.js/npm 的外部工具链绑定，全内核 100% 采用 Python 标准库实现"
+    },
+    {
+      "alternative": "Rust RFC Process & Kubernetes KEP",
+      "reason_rejected_or_adapted": "将语言级与大规模集群规范提炼为跨所有项目的通用轻量自动化契约"
+    },
+    {
+      "alternative": "Citation File Format (CFF)",
+      "reason_rejected_or_adapted": "补充了 CFF 所缺失的 AI 雷达检索词与动态量规记录，衍生出互补的 .provenance.json"
+    },
+    {
+      "alternative": "W3C PROV-DM (Provenance Data Model)",
+      "reason_rejected_or_adapted": "舍弃 W3C 极其繁琐沉重的 XML/OWL 本体论，压缩为纳秒级解析的轻量 JSON 谱系账本"
+    },
+    {
+      "alternative": "Diátaxis Documentation Framework",
+      "reason_rejected_or_adapted": "增加自适应锚点识别算法，使注入过程对异构 Markdown 格式达到非破坏性平衡"
+    },
+    {
+      "alternative": "OmniScout-Radar (全知元阵)",
+      "reason_rejected_or_adapted": "本工具专精于引用提纯、五维量规审计与有机融合，与雷达的全网穿透搜索形成严密正交分工"
+    }
+  ],
+  "non_goals": [
+    "坚决杜绝引入重型第三方未审计框架与臃肿依赖",
+    "坚决拒绝只有形式文档而无真实代码的空壳八股",
+    "严禁破坏现有宿主机环境或私自联网泄露凭据"
+  ]
+}

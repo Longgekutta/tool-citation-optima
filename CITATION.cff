@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: "tool-citation-optima"
+message: "If you use or reference this project, please cite it using the metadata below."
+type: software
+authors:
+  - family-names: "Antigravity"
+    given-names: "Fleet"
+version: "1.0.0"
+date-released: "2026-09-25"
+license: "MIT"
+abstract: "tool-citation-optima: High-performance first-principles component with verified provenance."
+repository-code: "https://github.com/Longgekutta/tool-citation-optima"

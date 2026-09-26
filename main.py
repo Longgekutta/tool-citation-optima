@@ -10,8 +10,13 @@ import json
 import argparse
 import time
 
-# 确保能载入同级 core 模块
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 确保能载入同级 core 模块并锚定工作目录
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
+WORKSPACE_BASE = os.path.dirname(BASE_DIR)
+for p in (BASE_DIR, WORKSPACE_BASE):
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from core.models import HeritageSource
 from core.scanner import ProvenanceScanner
@@ -59,7 +64,7 @@ def cmd_health(args=None) -> int:
     return 0 if status_str == "OK" else 1
 
 def cmd_clean(args=None) -> int:
-    """标准动词: clean (清理缓存与临时产物)"""
+    """标准动词: clean (清理缓存与临时产物，治理日志爆炸)"""
     root_dir = os.path.dirname(os.path.abspath(__file__))
     cleaned = 0
     for root, dirs, files in os.walk(root_dir):
@@ -72,8 +77,61 @@ def cmd_clean(args=None) -> int:
                     cleaned += 1
                 except Exception:
                     pass
-    print(f"🧹 [CLEAN] 已清理 {cleaned} 个缓存目录。")
+    radar = RadarBridge()
+    pruned = radar.prune_audit_cache(keep_latest=10)
+    print(f"🧹 [CLEAN] 已清理 {cleaned} 个本地缓存目录，修剪了 {pruned} 份冗余雷达历史账本。")
     return 0
+
+def cmd_skeleton(args) -> int:
+    """子命令: skeleton (零幻觉提取雷达候选，预填事实骨架表格，引导 AI 填写决策动因)"""
+    target = os.path.abspath(args.path)
+    radar = RadarBridge()
+    
+    # 自动修剪审计缓存，杜绝文档/日志爆炸
+    pruned = radar.prune_audit_cache(keep_latest=20)
+    if pruned > 0:
+        print(f"🧹 [PRUNE] 已自动淘汰修剪 {pruned} 份过期历史雷达审计日志，防范磁盘膨胀。")
+
+    if getattr(args, "report", None):
+        report_path = os.path.abspath(args.report)
+        if not os.path.isfile(report_path):
+            print(f"❌ 报告文件不存在: {report_path}")
+            return 1
+        radar_data = radar.load_report(report_path)
+        topic = radar_data.get("meta", {}).get("domain_topic") or os.path.basename(target)
+    elif getattr(args, "topic", None):
+        topic = args.topic
+        if not radar.is_available():
+            print(f"❌ 错误: 未能在本地找到 tool-omniscout-radar: {radar.radar_path}")
+            return 1
+        print(f"🚀 正在调用 tool-omniscout-radar 极限探测: '{topic}'...")
+        radar_data = radar.trigger_radar(topic, deep=getattr(args, "deep", False))
+    else:
+        latest = radar._find_latest_report_for_topic("")
+        if not latest:
+            print("❌ 请指定 --topic 或 --report")
+            return 1
+        print(f"📂 自动复用最新雷达报告: {latest}")
+        radar_data = radar.load_report(latest)
+        topic = radar_data.get("meta", {}).get("domain_topic") or os.path.basename(target)
+
+    # 100% 机器事实无损提取，启用骨架模式 (skeleton_mode=True)
+    sources = radar.extract_heritage_sources(radar_data, max_items=args.limit, skeleton_mode=True)
+    if not sources:
+        print("⚠️ 未发现可用候选项目。")
+        return 1
+
+    print(f"✅ 机器已 100% 确定性提取 {len(sources)} 项候选工程事实 (0 幻觉保证)。")
+    injector = OrganicInjector(target)
+    res = injector.inject_project(topic=topic, sources=sources, target_doc=args.doc)
+
+    print(f"\n✨ [SKELETON 预填完成]:")
+    print(f"  - 注入文档: {res['modified_files']}")
+    print(f"  - 机器账本: {res['created_files']}")
+    print(f"  - 状态: 事实骨架已就绪，已植入 <!-- AI_DECISION_ADOPT --> 与 <!-- AI_DECISION_TRADEOFF --> 引导标记。")
+    print(f"\n👉 [下一步行动]: 请 AI 针对对标表格填写具体的决策理由与取舍原因，填写完成后运行 `python main.py audit {target}` 进行五维量规终审。")
+    return 0
+
 
 def cmd_test(args=None) -> int:
     """标准动词: test (运行内部自洽单元测试)"""
@@ -295,6 +353,15 @@ def main():
     p_inject.add_argument("--limit", type=int, default=4, help="注入的最优权威源数量")
     p_inject.add_argument("--doc", default=None, help="指定注入的主文档")
 
+    # 3.1 skeleton
+    p_sk = subparsers.add_parser("skeleton", help="零幻觉提取雷达候选，预填事实骨架表格，引导 AI 填写决策动因")
+    p_sk.add_argument("path", nargs="?", default=".", help="目标工程物理路径")
+    p_sk.add_argument("--topic", "-t", default=None, help="检索与溯源的领域主题关键词")
+    p_sk.add_argument("--report", "-r", default=None, help="已有的 radar 审计报告 JSON 路径")
+    p_sk.add_argument("--limit", "-n", type=int, default=5, help="收录对标源数量上限")
+    p_sk.add_argument("--doc", "-d", default=None, help="指定注入的主文档")
+    p_sk.add_argument("--deep", action="store_true", help="启用深度思考模式")
+
     # 4. init-cff
     p_cff = subparsers.add_parser("init-cff", help="初始化 CITATION.cff 与 .provenance.json")
     p_cff.add_argument("path", nargs="?", default=".", help="目标工程物理路径")
@@ -349,6 +416,8 @@ def main():
         sys.exit(cmd_ground(parsed_args))
     elif parsed_args.subcommand == "inject":
         sys.exit(cmd_inject(parsed_args))
+    elif parsed_args.subcommand == "skeleton":
+        sys.exit(cmd_skeleton(parsed_args))
     elif parsed_args.subcommand == "init-cff":
         sys.exit(cmd_init_cff(parsed_args))
     elif parsed_args.subcommand == "fixed-point":

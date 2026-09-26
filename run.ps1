@@ -1,19 +1,71 @@
-<#
-.SYNOPSIS
-    tool-citation-optima 5大通用操作动词脚本 (PowerShell)
-#>
 param (
     [Parameter(Position = 0)]
-    [ValidateSet("setup", "run", "test", "health", "clean")]
-    [string]$Verb = "health"
+    [string]$Verb = "help",
+    
+    [Parameter(Position = 1)]
+    [string]$Target = "."
 )
 
-$ErrorActionPreference = "Stop"
+# 1. CWD Anchoring
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $ScriptDir
 
-switch ($Verb) {
-    "setup"  { Write-Host "⚙️ [Setup] 环境检查..." -ForegroundColor Cyan; python -c "import sys; print('Python:', sys.version)"; Write-Host "✅ 就绪" -ForegroundColor Green }
-    "run"    { Write-Host "🚀 [Run] 核心执行..." -ForegroundColor Cyan; python main.py run }
-    "test"   { Write-Host "🧪 [Test] 运行单元测试..." -ForegroundColor Cyan; python -m unittest discover tests }
-    "health" { Write-Host "🩺 [Health] 探活..." -ForegroundColor Cyan; python main.py health }
-    "clean"  { Write-Host "🧹 [Clean] 清理缓存..." -ForegroundColor Cyan; Get-ChildItem -Path . -Include "__pycache__", "*.pyc" -Recurse -Force | Remove-Item -Recurse -Force; Write-Host "✅ 完成" -ForegroundColor Green }
+# 2. Auto-detect Python runtime without environment variable requirements
+function Get-PythonInterpreter {
+    if (Get-Command "python" -ErrorAction SilentlyContinue) {
+        return "python"
+    }
+    if (Get-Command "py" -ErrorAction SilentlyContinue) {
+        return "py"
+    }
+    if (Get-Command "python3" -ErrorAction SilentlyContinue) {
+        return "python3"
+    }
+    $localApp = $env:LOCALAPPDATA
+    $progFiles = $env:ProgramFiles
+    $searchPatterns = @(
+        "D:\DevTools\Python\Python*\python.exe",
+        "$localApp\Programs\Python\Python*\python.exe",
+        "$progFiles\Python*\python.exe",
+        "C:\Python*\python.exe",
+        "D:\Python*\python.exe"
+    )
+    foreach ($pattern in $searchPatterns) {
+        $found = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found -and (Test-Path $found.FullName)) {
+            return $found.FullName
+        }
+    }
+    throw "Python interpreter not found. Please install Python."
+}
+
+$PythonExe = Get-PythonInterpreter
+
+# 3. Dynamic PYTHONPATH injection
+$WorkspaceBase = Split-Path -Parent $ScriptDir
+$env:PYTHONPATH = $ScriptDir + ";" + $WorkspaceBase + ";" + $env:PYTHONPATH
+
+# 4. Standard Verbs Dispatch
+switch ($Verb.ToLower()) {
+    "setup" {
+        & $PythonExe main.py setup
+    }
+    "run" {
+        & $PythonExe main.py run $Target
+    }
+    "test" {
+        & $PythonExe main.py test
+    }
+    "health" {
+        & $PythonExe main.py health
+    }
+    "clean" {
+        & $PythonExe main.py clean
+    }
+    "skeleton" {
+        & $PythonExe main.py skeleton $Target
+    }
+    Default {
+        & $PythonExe main.py --help
+    }
 }

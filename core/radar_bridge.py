@@ -79,18 +79,33 @@ class RadarBridge:
             "raw_output": proc.stdout
         }
 
-    def extract_heritage_sources(self, radar_data: Dict[str, Any], max_items: int = 5) -> List[HeritageSource]:
+    def extract_heritage_sources(self, radar_data: Dict[str, Any], max_items: int = 5, skeleton_mode: bool = False) -> List[HeritageSource]:
         """将雷达审计数据清洗提纯为标准化的技术思想溯源与对标源列表"""
         sources = []
         candidates = radar_data.get("reports", [])
         
+        def _safe_num(val, default=0):
+            if isinstance(val, (int, float)):
+                return float(val)
+            if isinstance(val, str):
+                cleaned = val.replace(",", "").replace("+", "").strip().lower()
+                if cleaned.endswith("k"):
+                    try: return float(cleaned[:-1]) * 1000.0
+                    except Exception: return float(default)
+                if cleaned.endswith("m"):
+                    try: return float(cleaned[:-1]) * 1000000.0
+                    except Exception: return float(default)
+                try: return float(cleaned)
+                except Exception: return float(default)
+            return float(default)
+
         # 优先选取 ADOPT 与 高星候选
         sorted_candidates = sorted(
             candidates,
             key=lambda x: (
-                1 if "ADOPT" in x.get("recommendation", "") else 0,
-                x.get("score", 0),
-                x.get("stars", 0)
+                1 if "ADOPT" in str(x.get("recommendation", "")) else 0,
+                _safe_num(x.get("score", 0)),
+                _safe_num(x.get("stars", 0))
             ),
             reverse=True
         )
@@ -101,10 +116,14 @@ class RadarBridge:
             stars = item.get("stars", 0)
             desc = item.get("description", "").strip() or "全球工业界高星参考实现"
             
-            # 提炼核心思想与借鉴点
+            # 提炼核心思想与事实
             core_insight = f"{desc} (工业界验证度: ⭐ {stars})"
-            adopted = f"吸收其架构解耦经验与针对该领域的针对性验证量规 (得分: {item.get('score', 80)})"
-            tradeoff = "坚决拒绝第三方重型依赖，完全以 Python 原生标准库重构，追求 <15ms 启动与不动点自洽"
+            if skeleton_mode:
+                adopted = f"<!-- AI_DECISION_ADOPT: 阐明本项目针对 [{repo_name}] 吸收借鉴的核心机理与创新算子 -->"
+                tradeoff = f"<!-- AI_DECISION_TRADEOFF: 阐述为何不直接全盘引入 [{repo_name}] 的取舍与差异 (Non-Goals) -->"
+            else:
+                adopted = f"吸收其架构解耦经验与针对该领域的针对性验证量规 (得分: {item.get('score', 80)})"
+                tradeoff = "坚决拒绝第三方重型依赖，完全以 Python 原生标准库重构，追求 <15ms 启动与不动点自洽"
 
             sources.append(HeritageSource(
                 name=repo_name,
@@ -118,6 +137,22 @@ class RadarBridge:
 
         return sources
 
+    def prune_audit_cache(self, keep_latest: int = 20) -> int:
+        """修剪雷达审计目录，防止审计日志与历史文档爆炸 (保留最近 keep_latest 份)"""
+        reports = self.list_existing_reports()
+        if len(reports) <= keep_latest:
+            return 0
+        reports.sort(key=lambda p: os.path.getmtime(p))
+        to_delete = reports[:-keep_latest]
+        deleted = 0
+        for p in to_delete:
+            try:
+                os.remove(p)
+                deleted += 1
+            except Exception:
+                pass
+        return deleted
+
     def _find_latest_report_for_topic(self, topic: str) -> Optional[str]:
         """根据主题查找最新的报告文件"""
         reports = self.list_existing_reports()
@@ -126,3 +161,4 @@ class RadarBridge:
         # 简单根据修改时间降序排序
         reports.sort(key=lambda p: os.path.getmtime(p), reverse=True)
         return reports[0]
+

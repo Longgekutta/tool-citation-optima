@@ -209,6 +209,24 @@ class ProvenanceAuditor:
 
     def _eval_rationale_and_alternatives(self, nongoals: List[Dict[str, Any]], tables: List[Dict[str, Any]]) -> AuditDimensionScore:
         """评估架构推导依据与备选舍弃维度 (满分 20)"""
+        # 严格检查是否存在未填写的 AI 决策占位符 (AI_DECISION / AI_TODO)
+        unfilled_placeholders = []
+        for t in tables:
+            for r in t.get("rows", []):
+                for cell in r:
+                    if "<!-- AI_DECISION_" in cell or "<!-- AI_TODO" in cell:
+                        unfilled_placeholders.append(cell[:60])
+        
+        if unfilled_placeholders:
+            return AuditDimensionScore(
+                dimension="rationale_and_alternatives",
+                score=4,
+                status="FAIL",
+                details=f"检测到对标矩阵中存在 {len(unfilled_placeholders)} 处未完成的 AI 决策动因占位符 (AI_DECISION)",
+                evidence=unfilled_placeholders[:3],
+                remediation_tips=["AI 必须针对每个对标项阐明吸收借鉴点与取舍原因（去除 <!-- AI_DECISION_... --> 占位符）方可通过门禁。"]
+            )
+
         has_explicit_nongoal = len(nongoals) > 0
         has_table_alternatives = False
         

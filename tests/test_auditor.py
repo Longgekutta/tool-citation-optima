@@ -95,5 +95,47 @@ python main.py
         self.assertEqual(res.rating, "S")
         self.assertTrue(res.fixed_point_ready)
 
+    def test_skeleton_unfilled_placeholder_fails_gate(self):
+        # 验证骨架占位符未填写时，门禁坚决一票否决
+        code_content = "\n".join([f"def func_{i}():\n    return {i}\n" for i in range(25)])
+        with open(os.path.join(self.project_path, "main.py"), "w", encoding="utf-8") as f:
+            f.write(code_content)
+
+        readme_content = "# Genuine Project\n\n## 🚫 Non-Goals\n- No empty shells\n"
+        with open(os.path.join(self.project_path, "README.md"), "w", encoding="utf-8") as f:
+            f.write(readme_content)
+
+        # 骨架模式来源
+        sources = [
+            HeritageSource(
+                name="SOTA Repo",
+                category="OPEN_SOURCE",
+                url="https://github.com/example/sota",
+                core_insight="SOTA Insight",
+                adopted_aspects="<!-- AI_DECISION_ADOPT: 未填写 -->",
+                rejection_reason_or_tradeoff="<!-- AI_DECISION_TRADEOFF: 未填写 -->",
+                stars_or_citations=5000
+            )
+        ]
+        injector = OrganicInjector(self.project_path)
+        injector.inject_project(topic="自动化对标", sources=sources)
+
+        auditor = ProvenanceAuditor(self.project_path)
+        res = auditor.audit()
+        # 门禁必须拒绝通过
+        self.assertEqual(res.dimensions["rationale_and_alternatives"].status, "FAIL")
+        self.assertFalse(res.fixed_point_ready)
+
+        # 修复占位符后，门禁放行
+        with open(os.path.join(self.project_path, "README.md"), "r", encoding="utf-8") as f:
+            c = f.read()
+        c = c.replace("<!-- AI_DECISION_ADOPT: 未填写 -->", "吸收其微内核设计").replace("<!-- AI_DECISION_TRADEOFF: 未填写 -->", "不引入其重型依赖")
+        with open(os.path.join(self.project_path, "README.md"), "w", encoding="utf-8") as f:
+            f.write(c)
+
+        res2 = auditor.audit()
+        self.assertEqual(res2.dimensions["rationale_and_alternatives"].status, "PASS")
+
 if __name__ == "__main__":
     unittest.main()
+

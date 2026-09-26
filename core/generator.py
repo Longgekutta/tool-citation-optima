@@ -19,12 +19,13 @@ class ProvenanceGenerator:
         version: str = "1.0.0",
         authors: Optional[List[Dict[str, str]]] = None,
         repo_url: Optional[str] = None,
-        license_str: str = "MIT"
+        license_str: str = "MIT",
+        keywords: Optional[List[str]] = None,
+        commit_hash: Optional[str] = None
     ) -> str:
-        """生成符合 GitHub 官方规范的 CITATION.cff (YAML 格式)"""
+        """生成符合 GitHub 与 CFF 1.2.0 官方规范的 CITATION.cff (YAML 格式)"""
         author_list = authors or [{"family-names": "Antigravity", "given-names": "Fleet"}]
         date_today = datetime.now().strftime("%Y-%m-%d")
-        url_line = f"url: \"{repo_url}\"\n" if repo_url else ""
 
         lines = [
             'cff-version: 1.2.0',
@@ -45,6 +46,12 @@ class ProvenanceGenerator:
         ])
         if repo_url:
             lines.append(f'repository-code: "{repo_url}"')
+        if commit_hash:
+            lines.append(f'commit: "{commit_hash}"')
+        if keywords:
+            lines.append('keywords:')
+            for kw in keywords:
+                lines.append(f'  - "{kw}"')
         
         return "\n".join(lines) + "\n"
 
@@ -59,7 +66,7 @@ class ProvenanceGenerator:
         if not sources:
             return ""
 
-        headers = ["权威源流 / 开源基座", "源流分类", "核心思想 / 机制突破", "本项目吸收 / 借鉴要点", "超越点与取舍 (Trade-offs)"]
+        headers = ["权威源流 / 开源基座", "源流分类 / 架构层级", "核心思想 / 机制突破", "本项目吸收 / 借鉴要点", "超越点与取舍 (Trade-offs)"]
         header_line = "| " + " | ".join(headers) + " |"
         sep_line = "| " + " | ".join([":---" for _ in headers]) + " |"
         
@@ -67,7 +74,9 @@ class ProvenanceGenerator:
         for idx, s in enumerate(sources, 1):
             stars_str = f" (⭐ {s.stars_or_citations})" if s.stars_or_citations else ""
             name_cell = f"**[{s.name}]({s.url})**{stars_str} [^{idx}]"
-            cat_cell = f"`{s.category}`"
+            tier_badge = getattr(s, 'tier_badge', '') or ''
+            cat_str = f"`{s.category}`" + (f" `{tier_badge}`" if tier_badge else "")
+            cat_cell = cat_str
             insight_cell = s.core_insight.replace("|", "&#124;").replace("\n", " ")
             adopted_cell = s.adopted_aspects.replace("|", "&#124;").replace("\n", " ")
             tradeoff_cell = s.rejection_reason_or_tradeoff.replace("|", "&#124;").replace("\n", " ")

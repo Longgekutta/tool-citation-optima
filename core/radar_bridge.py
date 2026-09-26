@@ -13,7 +13,9 @@ from core.models import HeritageSource
 class RadarBridge:
     """与 D:\\gitee\\tool-omniscout-radar 深度联动的桥接器"""
 
-    DEFAULT_RADAR_PATH = r"D:\gitee\tool-omniscout-radar"
+    # 优先检测环境配置、D:\github 同级目录或当前上级目录
+    _peer_radar = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tool-omniscout-radar"))
+    DEFAULT_RADAR_PATH = os.environ.get("RADAR_PATH") or (_peer_radar if os.path.isdir(_peer_radar) else r"D:\github\tool-omniscout-radar")
 
     def __init__(self, radar_path: Optional[str] = None):
         self.radar_path = os.path.abspath(radar_path or self.DEFAULT_RADAR_PATH)

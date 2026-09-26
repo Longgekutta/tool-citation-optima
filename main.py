@@ -28,7 +28,7 @@ def cmd_setup(args=None) -> int:
         return 1
 
     radar = RadarBridge()
-    radar_status = "✅ 可用" if radar.is_available() else "⚠️ 未找到 (建议配置 D:\\gitee\\tool-omniscout-radar)"
+    radar_status = "✅ 可用" if radar.is_available() else "⚠️ 未找到 (建议配置 D:\\github\\tool-omniscout-radar)"
     print(f"  - Python 版本: {sys.version.split()[0]} (100% 标准库，零第三方 pip 依赖)")
     print(f"  - OmniScout-Radar 状态: {radar_status}")
     print("✅ [SETUP] tool-citation-optima 环境就绪。")

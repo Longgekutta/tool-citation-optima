@@ -276,7 +276,7 @@ class OrganicInjector:
             radar_query_vectors=[f"{topic} core", f"{topic} benchmark", f"{topic} spec"],
             grounded_sources=grounded_sources,
             architectural_invariants=[
-                "Optimal Architecture & Dependency Freedom",
+                "Negative Constraints & Architecture Sovereignty",
                 "Sub-15ms Startup & Verification Latency",
                 "Fixed-Point Convergence f(x) = x"
             ],

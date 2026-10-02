@@ -1,7 +1,7 @@
 # tool-citation-optima: 全域文档引用、技术溯源与决策依据极限优化引擎
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://python.org)
-[![Zero-Pip: 100% Standard Library](https://img.shields.io/badge/Zero--Pip-100%25%20StdLib-blue.svg)](#)
+[![Architecture: Optimal](https://img.shields.io/badge/Architecture-Optimal_Polyglot-blue.svg)](#)
 [![Anti-Bureaucracy: 100% Guaranteed](https://img.shields.io/badge/Anti--Bureaucracy-100%25%20Zero--Empty--Shells-orange.svg)](#)
 [![Philosophy: Verified Provenance](https://img.shields.io/badge/Philosophy-Verified%20Provenance-purple.svg)](#)
 [![Tests: 100% Passing](https://img.shields.io/badge/Tests-100%25%20Passing-brightgreen.svg)](#)

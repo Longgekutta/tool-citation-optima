@@ -88,9 +88,9 @@ class ProvenanceScanner:
             dirs[:] = [d for d in dirs if d not in (".git", ".cache", "__pycache__", "node_modules", ".venv", "venv")]
             rel_dir = os.path.relpath(root, self.project_path)
             
-            # 仅限根目录、specs、docs、spec 目录
-            is_allowed_dir = (rel_dir == "." or rel_dir in ("specs", "docs", "spec", "decisions", "adr"))
-            if not is_allowed_dir and not any(rel_dir.startswith(p) for p in ("specs", "docs", "spec", "decisions", "adr")):
+            # 仅限根目录、specs、docs、spec、references、decisions 目录
+            is_allowed_dir = (rel_dir == "." or rel_dir in ("specs", "docs", "spec", "decisions", "adr", "references"))
+            if not is_allowed_dir and not any(rel_dir.startswith(p) for p in ("specs", "docs", "spec", "decisions", "adr", "references")):
                 continue
 
             for f in files:

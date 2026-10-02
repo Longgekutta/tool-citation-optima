@@ -53,7 +53,7 @@ class TestRadarBridge(unittest.TestCase):
         reports = radar.list_existing_reports()
         if reports:
             data = radar.load_report(reports[0])
-            self.assertIn("reports", data)
+            self.assertTrue("reports" in data or "generations" in data)
         else:
             data = mock_data
 

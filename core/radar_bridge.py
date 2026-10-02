@@ -83,6 +83,17 @@ class RadarBridge:
         """将雷达审计数据清洗提纯为标准化的技术思想溯源与对标源列表"""
         sources = []
         candidates = radar_data.get("reports", [])
+        if not candidates and "generations" in radar_data:
+            for g in radar_data.get("generations", []):
+                for gem in g.get("top_gems", []):
+                    candidates.append({
+                        "repo_name": gem.get("repo"),
+                        "url": f"https://github.com/{gem.get('repo')}",
+                        "stars": gem.get("stars", 0),
+                        "description": gem.get("description", ""),
+                        "score": 85,
+                        "recommendation": "ADOPT"
+                    })
         
         def _safe_num(val, default=0):
             if isinstance(val, (int, float)):

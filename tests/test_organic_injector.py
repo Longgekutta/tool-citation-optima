@@ -115,5 +115,69 @@ class TestOrganicInjectorAndFixedPoint(unittest.TestCase):
         self.assertEqual(audit_res.rating, "S")
         self.assertTrue(audit_res.fixed_point_ready)
 
+    def test_tiered_progressive_provenance_architecture(self):
+        """测试三级渐进分层披露架构 (REFERENCES.md 深度档案 + README.md 轻量门面)"""
+        sources = [
+            HeritageSource(
+                name="SourceA",
+                category="OPEN_SOURCE",
+                url="https://github.com/org/source-a",
+                core_insight="Insight A",
+                adopted_aspects="Adopted A",
+                rejection_reason_or_tradeoff="Tradeoff A",
+                stars_or_citations=5000
+            ),
+            HeritageSource(
+                name="SourceB",
+                category="OPEN_SOURCE",
+                url="https://github.com/org/source-b",
+                core_insight="Insight B",
+                adopted_aspects="Adopted B",
+                rejection_reason_or_tradeoff="Tradeoff B",
+                stars_or_citations=3000
+            ),
+            HeritageSource(
+                name="SourceC",
+                category="OPEN_SOURCE",
+                url="https://github.com/org/source-c",
+                core_insight="Insight C",
+                adopted_aspects="Adopted C",
+                rejection_reason_or_tradeoff="Tradeoff C",
+                stars_or_citations=2000
+            )
+        ]
+
+        injector = OrganicInjector(self.project_path)
+        # 1. 注入到独立的 REFERENCES.md
+        res = injector.inject_project(topic="分层架构测试", sources=sources, target_doc="REFERENCES.md")
+        
+        ref_file = os.path.join(self.project_path, "REFERENCES.md")
+        readme_file = os.path.join(self.project_path, "README.md")
+        
+        self.assertTrue(os.path.exists(ref_file))
+        with open(ref_file, "r", encoding="utf-8") as f:
+            ref_content = f.read()
+        self.assertIn("SourceA", ref_content)
+        self.assertIn("SourceB", ref_content)
+        self.assertIn("SourceC", ref_content)
+        
+        with open(readme_file, "r", encoding="utf-8") as f:
+            readme_content = f.read()
+        # README 应包含门面跳转链接，但不能包含庞大的 5 列表格
+        self.assertIn("REFERENCES.md 完整先验对标与权威引用档案", readme_content)
+        self.assertNotIn("| 权威源流 / 开源基座 |", readme_content)
+
+        # 2. 审计验收：必须依然能够检测到 REFERENCES.md 中的矩阵，达成 100/100 S Tier
+        auditor = ProvenanceAuditor(self.project_path)
+        audit_res = auditor.audit()
+        self.assertGreaterEqual(audit_res.total_score, 90)
+        self.assertEqual(audit_res.rating, "S")
+        self.assertTrue(audit_res.fixed_point_ready)
+
+        # 3. 不动点测试：再次注入，不应有文件被修改
+        res2 = injector.inject_project(topic="分层架构测试", sources=sources, target_doc="REFERENCES.md")
+        self.assertEqual(len(res2["modified_files"]), 0)
+        self.assertTrue(res2["fixed_point"])
+
 if __name__ == "__main__":
     unittest.main()

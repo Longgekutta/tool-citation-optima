@@ -44,6 +44,16 @@ class OrganicInjector:
                 results["modified_files"].append(os.path.relpath(doc_path, self.project_path))
                 results["fixed_point"] = False
 
+            # 若目标文档不是 README.md，且项目存在 README.md，则在 README.md 中维护轻量级门面索引 (Storefront Facade)
+            readme_candidates = [os.path.join(self.project_path, fname) for fname in ("README.md", "README_CN.md")]
+            for rpath in readme_candidates:
+                if os.path.isfile(rpath) and os.path.abspath(rpath) != os.path.abspath(doc_path):
+                    facade_mod = self._inject_readme_facade(rpath, os.path.relpath(doc_path, self.project_path), topic, len(sources))
+                    if facade_mod:
+                        results["modified_files"].append(os.path.relpath(rpath, self.project_path))
+                        results["fixed_point"] = False
+                    break
+
         # 2. 生成/同步 .provenance.json
         prov_path = os.path.join(self.project_path, ".provenance.json")
         prov_modified = self._sync_provenance_json(prov_path, topic, sources, non_goals)
@@ -69,11 +79,19 @@ class OrganicInjector:
         return results
 
     def _resolve_target_doc(self, target_doc: Optional[str]) -> Optional[str]:
-        """解析目标文档绝对路径"""
+        """解析目标文档绝对路径，若指定文件不存在则自动创建其父目录与基础骨架"""
         if target_doc:
             p = os.path.join(self.project_path, target_doc) if not os.path.isabs(target_doc) else target_doc
             if os.path.isfile(p):
                 return p
+            # 若指定的 target_doc 尚未存在，允许自动创建其父目录与初始文档
+            parent_dir = os.path.dirname(p)
+            if parent_dir:
+                os.makedirs(parent_dir, exist_ok=True)
+            doc_title = os.path.splitext(os.path.basename(p))[0].replace("_", " ").title()
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(f"# {doc_title} (技术思想溯源与全球对标档案)\n\n> 本文档为项目技术思想渊源、全球权威工程对标与取舍决策的完整归档。\n\n")
+            return p
 
         # 默认寻找 README.md 或 主规范
         for fname in ["README.md", "README_CN.md", "SPEC.md"]:
@@ -82,6 +100,72 @@ class OrganicInjector:
                 return candidate
 
         return None
+
+    def _inject_readme_facade(self, readme_path: str, target_rel_path: str, topic: str, sources_count: int) -> bool:
+        """在 README.md 中维护精简门面引用索引 (Storefront Facade)，避免大表格撑爆 README"""
+        with open(readme_path, "r", encoding="utf-8", errors="replace") as f:
+            original_content = f.read()
+
+        norm_target_path = target_rel_path.replace("\\", "/")
+        facade_section = (
+            f"{self.HERITAGE_SECTION_HEADER}\n\n"
+            f"本项目秉承第一性原理与零幻觉工程原则，严格站在全球工业标杆与开源先验的肩膀上演进构建。\n\n"
+            f"完整权威源流矩阵（收录 {sources_count} 项标杆）、深度机制对标、吸收借鉴点与取舍论证详见独立档案：\n"
+            f"👉 **[{norm_target_path} 完整先验对标与权威引用档案]({norm_target_path})**\n\n"
+            f"*(注：机器可读元数据与规范引用已同步至 `.provenance.json` 与 `CITATION.cff`)*\n"
+        )
+
+        # 场景 A: README 中已经有这个章节头
+        if self.HERITAGE_SECTION_HEADER in original_content:
+            # 检查是否已经是干净的门面且链接一致
+            if norm_target_path in original_content and "完整先验对标与权威引用档案" in original_content:
+                # 已经是门面指针，收敛达成不动点
+                return False
+
+            # 如果原本是臃肿大表格或旧链接，将其替换为紧凑的门面索引
+            pattern = re.compile(
+                r'## 🏛️ 技术思想溯源与全球对标矩阵[^\n]*\n[\s\S]*?(?=\n## |\Z)',
+                re.MULTILINE
+            )
+            updated_content = pattern.sub(facade_section.strip() + "\n\n", original_content, count=1)
+            if updated_content.strip() == original_content.strip():
+                return False
+
+            with open(readme_path, "w", encoding="utf-8") as f:
+                f.write(updated_content)
+            return True
+
+        # 场景 B: README 中尚无该章节，寻找合适锚点插入
+        lines = original_content.splitlines()
+        insert_idx = -1
+        target_anchors = ["## 快速开始", "## 核心特性", "## 架构设计", "## 设计理念", "## 哲学", "## 快速上手", "## 特性", "## 模块划分"]
+        for idx, line in enumerate(lines):
+            line_s = line.strip()
+            if any(line_s.startswith(anchor) for anchor in target_anchors):
+                insert_idx = idx
+                break
+
+        if insert_idx != -1:
+            new_lines = lines[:insert_idx] + [facade_section.strip(), ""] + lines[insert_idx:]
+            final_content = "\n".join(new_lines)
+        else:
+            license_idx = -1
+            for idx, line in enumerate(lines):
+                if line.strip().startswith(("## 许可证", "## License", "## 版权")):
+                    license_idx = idx
+                    break
+            if license_idx != -1:
+                new_lines = lines[:license_idx] + [facade_section.strip(), ""] + lines[license_idx:]
+                final_content = "\n".join(new_lines)
+            else:
+                final_content = original_content.rstrip() + "\n\n" + facade_section
+
+        if final_content.strip() == original_content.strip():
+            return False
+
+        with open(readme_path, "w", encoding="utf-8") as f:
+            f.write(final_content)
+        return True
 
     def _inject_markdown(self, doc_path: str, topic: str, sources: List[HeritageSource]) -> bool:
         """非破坏性将对标矩阵有机植入到 Markdown 文档的最佳锚点"""
